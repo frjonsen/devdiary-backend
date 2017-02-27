@@ -1,0 +1,6 @@
+[logging]
+file = "server.log"
+format = "Uri: {uri}, Method: {method}, Status: {status}, Duration: {response-time}, Time: {request-time}"
+
+[tls]
+p12 = "identity.p12"
