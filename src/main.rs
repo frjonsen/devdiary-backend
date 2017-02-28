@@ -4,7 +4,7 @@ extern crate time;
 extern crate logger;
 extern crate config;
 extern crate hyper_native_tls;
-//extern crate iron_sessionstorage;
+extern crate iron_sessionstorage;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate slog;
 extern crate slog_stream;

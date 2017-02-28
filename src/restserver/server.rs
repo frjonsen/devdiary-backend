@@ -7,6 +7,29 @@ use iron::Handler;
 struct ResponseTime;
 impl typemap::Key for ResponseTime { type Value = u64; }
 
+pub struct Session {
+    pub token: String
+}
+
+impl ::iron_sessionstorage::Value for Session {
+    fn get_key() -> &'static str {
+        "session_token"
+    }
+
+    fn into_raw(self) -> String {
+        self.token
+    }
+
+    fn from_raw(value: String) -> Option<Self> {
+        if value.is_empty() {
+            None
+        } else {
+            Some(Session { token: value })
+        }
+
+    }
+}
+
 impl BeforeMiddleware for ResponseTime {
     fn before(&self, req: &mut Request) -> IronResult<()> {
         req.extensions.insert::<ResponseTime>(::time::precise_time_ns());
@@ -35,6 +58,9 @@ impl Server<Chain> {
     }
 
     fn make_chain(router: super::RestRouter) -> Chain {
+        use ::iron_sessionstorage::SessionStorage;
+        use ::iron_sessionstorage::backends::SignedCookieBackend;
+
         let default_format = "Uri: {uri}, Method: {method}, Status: {status}, Duration: {response-time}, Time: {request-time}";
         let format = ::CONFIG.read().unwrap().get_str_or_default("logging.format", &default_format);
         let log_format = Format::new(&format);
@@ -43,7 +69,7 @@ impl Server<Chain> {
         let (logger_before, logger_after) = Logger::new(log_format);
         chain.link_before(logger_before);
         chain.link_before(ResponseTime);
-        //chain.link_around(::SessionStorage::new(::SignedCookieBackend::new(b"verysecret".to_vec())));
+        chain.link_around(SessionStorage::new(SignedCookieBackend::new(b"verysecret".to_vec())));
         chain.link_after(ResponseTime);
         chain.link_after(logger_after);
         chain
