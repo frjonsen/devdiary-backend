@@ -12,6 +12,8 @@ config = "*"
 log = "*"
 lazy_static = "0.2.2"
 hyper-native-tls = "0.2"
+router = "*"
+iron-sessionstorage = "*"
 
 [dependencies.iron]
 version = "*"

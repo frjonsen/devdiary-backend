@@ -13,3 +13,5 @@ Cargo.lock
 *.key
 *.crt
 *.p12
+
+*.log

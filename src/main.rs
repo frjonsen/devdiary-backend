@@ -1,24 +1,24 @@
 extern crate iron;
+extern crate router;
 extern crate time;
 extern crate logger;
 extern crate config;
 extern crate hyper_native_tls;
-#[macro_use]
-extern crate lazy_static;
-
-#[macro_use]
-extern crate slog;
+//extern crate iron_sessionstorage;
+#[macro_use] extern crate lazy_static;
+#[macro_use] extern crate slog;
 extern crate slog_stream;
 extern crate slog_stdlog;
-#[macro_use]
-extern crate log;
-use std::sync::RwLock;
-use default_config::DefaultConfig;
-use hyper_native_tls::NativeTlsServer;
+#[macro_use] extern crate log;
 
-mod server;
+mod restserver;
 mod default_config;
 
+use restserver::{RestRouter, Server};
+use restserver::database::PostgresqlConnection;
+
+use std::sync::RwLock;
+use default_config::DefaultConfig;
 use std::io;
 use slog::DrainExt;
 
@@ -33,11 +33,7 @@ lazy_static!{
 struct MyFormat;
 
 impl slog_stream::Format for MyFormat {
-    fn format(&self,
-              io: &mut io::Write,
-              rinfo: &slog::Record,
-              _logger_values: &slog::OwnedKeyValueList)
-              -> io::Result<()> {
+    fn format(&self, io: &mut io::Write, rinfo: &slog::Record, _logger_values: &slog::OwnedKeyValueList) -> io::Result<()> {
         let msg = format!("{} - {}\n", rinfo.level(), rinfo.msg());
         let _ = try!(io.write_all(msg.as_bytes()));
         Ok(())
@@ -61,6 +57,7 @@ fn setup_logging() {
 
 fn main() {
     setup_logging();
-    let s = server::Server::new();
+    let router = RestRouter::new(PostgresqlConnection{});
+    let s = Server::new(router);
     s.start();
 }
