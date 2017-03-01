@@ -1,10 +1,11 @@
-﻿DELETE FROM LocalUser;
+﻿DELETE FROM GithubUser;
+DELETE FROM LocalUser;
 DELETE FROM Session;
 DELETE FROM Project;
 DELETE FROM Post;
 DELETE FROM Person;
 
-CREATE OR REPLACE FUNCTION create_user (uname text, pwd text, fname text = NULL)
+CREATE OR REPLACE FUNCTION create_local_user (uname text, pwd text, fname text = NULL)
 RETURNS Person AS
 $$
 DECLARE
@@ -22,13 +23,47 @@ END IF;
 END
 $$ LANGUAGE 'plpgsql';
 
-CREATE OR REPLACE FUNCTION authenticate_user(uname text, pwd text)
+CREATE OR REPLACE FUNCTION create_github_user(uname text, _github_access_token text, fname text = NULL)
+RETURNS Person AS
+$$
+DECLARE
+  _new_user Person;
+BEGIN
+  INSERT INTO Person(username, fullname) VALUES (uname, fname) RETURNING Person.id, Person.username, Person.fullname INTO _new_user;
+  INSERT INTO GithubUser(id, github_access_token) VALUES (_new_user.id, _github_access_token);
+  RETURN _new_user;
+END $$ LANGUAGE 'plpgsql';
+
+CREATE OR REPLACE FUNCTION authenticate_github_user(_github_access_token TEXT)
 RETURNS SETOF Person AS
 $$
 BEGIN
-  RETURN QUERY SELECT id, username, fullname FROM Person WHERE username=uname AND (EXISTS(SELECT id FROM LocalUser WHERE Person.id = LocalUser.id AND password=crypt(pwd, password)));
+  RETURN QUERY SELECT * FROM Person WHERE Person.id = (SELECT GithubUser.id FROM GithubUser WHERE github_access_token = _github_access_token);
 END
 $$ LANGUAGE 'plpgsql';
+
+CREATE OR REPLACE FUNCTION authenticate_local_user(uname text, pwd text)
+RETURNS SETOF Person AS
+$$
+BEGIN
+  RETURN QUERY SELECT * FROM Person WHERE username=uname AND (EXISTS(SELECT id FROM LocalUser WHERE Person.id = LocalUser.id AND password=crypt(pwd, password)));
+END
+$$ LANGUAGE 'plpgsql';
+
+CREATE OR REPLACE FUNCTION get_user(_id uuid = NULL, _username text = NULL)
+RETURNS SETOF Person AS
+$$
+BEGIN
+  IF _id IS NOT NULL AND _username IS NOT NULL THEN
+    RETURN QUERY SELECT * FROM Person WHERE Person.id = _id AND Person.username = _username;
+  ELSIF _id IS NOT NULL THEN
+    RETURN QUERY SELECT * FROM Person WHERE Person.id = _id;
+  ELSIF _username IS NOT NULL THEN
+    RETURN QUERY SELECT * FROM Person WHERE Person.username = _username;
+  ELSE
+    RAISE 'Must specify at least one parameter' using ERRCODE='invalid_parameter_value';
+  END IF;
+END $$ LANGUAGE 'plpgsql';
 
 CREATE OR REPLACE FUNCTION change_password(_id uuid, pwd text)
 RETURNS BOOLEAN AS
@@ -130,7 +165,8 @@ BEGIN
   RETURN QUERY SELECT Person.id, Person.username, Person.fullname FROM Person WHERE Person.id = _session.person_id;
 END $$ LANGUAGE 'plpgsql';
 
-SELECT * FROM create_user('ausername', 'apassword');
+SELECT * FROM create_github_user('ausername', 'apassword');
 /*SELECT create_new_session((SELECT id FROM Person));
 SELECT * FROM access_session_token((SELECT token FROM Session));*/
-SELECT * FROM authenticate_user('ausername', 'apassword');
+SELECT * FROM get_user(NULL, 'ausername');
+SELECT * FROM GithubUser;
