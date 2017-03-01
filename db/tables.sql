@@ -8,7 +8,11 @@ DROP TABLE IF EXISTS Person CASCADE;
 CREATE TABLE IF NOT EXISTS Person(
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   username text NOT NULL UNIQUE CHECK (LENGTH(username) > 2),
-  fullname text,
+  fullname text
+);
+
+CREATE TABLE IF NOT EXISTS LocalUser(
+  id uuid PRIMARY KEY REFERENCES Person(id),
   password char (60) NOT NULL CHECK (LENGTH(password) = 60)
 );
 
