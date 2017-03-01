@@ -49,6 +49,12 @@ pub struct Server<H: Handler> {
     internal_server: Iron<H>
 }
 
+fn read_cookies_secret() -> Vec<u8> {
+    let secret = ::CONFIG.read().unwrap().get_str("cookies.secret").unwrap();
+    let as_bytes =  secret.as_bytes();
+   as_bytes.to_vec()
+}
+
 impl Server<Chain> {
     pub fn new(router: super::RestRouter) -> Server<Chain> {
         let server = Iron::new(Server::make_chain(router));
@@ -69,7 +75,7 @@ impl Server<Chain> {
         let (logger_before, logger_after) = Logger::new(log_format);
         chain.link_before(logger_before);
         chain.link_before(ResponseTime);
-        chain.link_around(SessionStorage::new(SignedCookieBackend::new(b"verysecret".to_vec())));
+        chain.link_around(SessionStorage::new(SignedCookieBackend::new(read_cookies_secret())));
         chain.link_after(ResponseTime);
         chain.link_after(logger_after);
         chain
@@ -80,7 +86,6 @@ impl Server<Chain> {
         let domain = ::CONFIG.read().unwrap().get_str_or_default("server.domain", "localhost");
         let address: &str = &[domain, port].join(":");
         if let Some(identity) = ::CONFIG.read().unwrap().get_str("tls.p12") {
-
             let p = ::std::path::Path::new(&identity);
             // openssl req -x509 -newkey rsa:4096 -nodes -keyout localhost.key -out localhost.crt -days 3650
             // openssl pkcs12 -export -out identity.p12 -inkey localhost.key -in localhost.crt --password mypass

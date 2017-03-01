@@ -1,5 +1,6 @@
 ﻿CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+DROP TABLE IF EXISTS Session CASCADE;
 DROP TABLE IF EXISTS Post CASCADE;
 DROP TABLE IF EXISTS Project CASCADE;
 DROP TABLE IF EXISTS Person CASCADE;
@@ -16,7 +17,7 @@ CREATE TABLE IF NOT EXISTS Project(
   name text,
   description text,
   creator uuid NOT NULL REFERENCES Person(id),
-  created timestamptz DEFAULT now() NOT NULL
+  created timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS Post(
@@ -25,6 +26,15 @@ CREATE TABLE IF NOT EXISTS Post(
   content text,
   author uuid NOT NULL REFERENCES Person(id),
   project uuid NOT NULL REFERENCES Project(id),
-  created timestamptz DEFAULT now() NOT NULL,
+  created timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
   shareurl text DEFAULT NULL
 );
+
+CREATE TABLE IF NOT EXISTS Session(
+  token char(80) PRIMARY KEY,
+  person_id uuid NOT NULL REFERENCES Person(id),
+  created timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  access timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+CREATE INDEX idx_session_person ON Session(person_id);

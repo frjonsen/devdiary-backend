@@ -8,3 +8,6 @@ p12 = "identity.p12"
 [server]
 port = 8080
 # domain = localhost
+
+[configs]
+secrets = "secrets.toml"

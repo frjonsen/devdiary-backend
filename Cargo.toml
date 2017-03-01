@@ -9,6 +9,7 @@ slog = "*"
 slog-stream = "*"
 slog-stdlog = "*"
 config = "*"
+#config = {git = "https://github.com/frjonsen/config-rs.git"}
 log = "*"
 lazy_static = "0.2.2"
 hyper-native-tls = "0.2"

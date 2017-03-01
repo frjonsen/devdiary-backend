@@ -15,3 +15,5 @@ Cargo.lock
 *.p12
 
 *.log
+
+secrets.toml

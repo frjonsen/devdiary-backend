@@ -26,6 +26,9 @@ lazy_static!{
     static ref CONFIG: RwLock<DefaultConfig> = {
         let mut conf = config::Config::new();
         conf.merge(config::File::new("conf", config::FileFormat::Toml)).unwrap();
+        if let Some(config) = conf.get_str("configs.secrets") {
+            conf.merge(config::File::new(&config, config::FileFormat::Toml)).unwrap();
+        }
         RwLock::new(DefaultConfig::new(conf))
     };
 }
