@@ -1,26 +1,30 @@
-extern crate iron;
-extern crate router;
-extern crate time;
-extern crate logger;
-extern crate config;
-extern crate hyper_native_tls;
-extern crate iron_sessionstorage;
 #[macro_use] extern crate lazy_static;
-#[macro_use] extern crate slog;
-extern crate slog_stream;
-extern crate slog_stdlog;
 #[macro_use] extern crate log;
+#[macro_use] extern crate slog;
+#[macro_use] extern crate serde_derive;
+extern crate config;
+extern crate hyper;
+extern crate hyper_native_tls;
+extern crate iron;
+extern crate iron_sessionstorage;
+extern crate logger;
+extern crate plugin;
+extern crate router;
+extern crate slog_stdlog;
+extern crate slog_stream;
+extern crate time;
+extern crate serde_json;
+extern crate urlencoded;
 
-mod restserver;
+mod database;
 mod default_config;
-
-use restserver::{RestRouter, Server};
-use restserver::database::PostgresqlConnection;
-
-use std::sync::RwLock;
+mod restserver;
+use database::PostgresqlConnection;
 use default_config::DefaultConfig;
-use std::io;
+use restserver::{RouterBuilder, Server};
 use slog::DrainExt;
+use std::io;
+use std::sync::RwLock;
 
 lazy_static!{
     static ref CONFIG: RwLock<DefaultConfig> = {
@@ -60,7 +64,9 @@ fn setup_logging() {
 
 fn main() {
     setup_logging();
-    let router = RestRouter::new(PostgresqlConnection{});
+    let router = RouterBuilder::new(PostgresqlConnection{})
+    .oauth()
+    .finalize();
     let s = Server::new(router);
     s.start();
 }

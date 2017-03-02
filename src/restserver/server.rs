@@ -3,32 +3,10 @@ use iron::{BeforeMiddleware,AfterMiddleware, typemap};
 use logger::{Logger, Format};
 use router::Router;
 use iron::Handler;
+use ::iron_sessionstorage::cookie::Cookie;
 
 struct ResponseTime;
 impl typemap::Key for ResponseTime { type Value = u64; }
-
-pub struct Session {
-    pub token: String
-}
-
-impl ::iron_sessionstorage::Value for Session {
-    fn get_key() -> &'static str {
-        "session_token"
-    }
-
-    fn into_raw(self) -> String {
-        self.token
-    }
-
-    fn from_raw(value: String) -> Option<Self> {
-        if value.is_empty() {
-            None
-        } else {
-            Some(Session { token: value })
-        }
-
-    }
-}
 
 impl BeforeMiddleware for ResponseTime {
     fn before(&self, req: &mut Request) -> IronResult<()> {
@@ -45,25 +23,34 @@ impl AfterMiddleware for ResponseTime {
     }
 }
 
+
 pub struct Server<H: Handler> {
     internal_server: Iron<H>
 }
 
-fn read_cookies_secret() -> Vec<u8> {
-    let secret = ::CONFIG.read().unwrap().get_str("cookies.secret").unwrap();
-    let as_bytes =  secret.as_bytes();
-   as_bytes.to_vec()
-}
+
 
 impl Server<Chain> {
-    pub fn new(router: super::RestRouter) -> Server<Chain> {
+    pub fn new(router: Router) -> Server<Chain> {
         let server = Iron::new(Server::make_chain(router));
         Server {
             internal_server: server
          }
     }
 
-    fn make_chain(router: super::RestRouter) -> Chain {
+    fn read_server_address() -> String {
+        let port = ::CONFIG.read().unwrap().get_str_or_default("server.port", "3000");
+        let domain = ::CONFIG.read().unwrap().get_str_or_default("server.domain", "localhost");
+        return [domain, port].join(":");
+    }
+
+    fn read_cookies_secret() -> Vec<u8> {
+        let secret = ::CONFIG.read().unwrap().get_str("cookies.secret").unwrap();
+        let as_bytes =  secret.as_bytes();
+        as_bytes.to_vec()
+    }
+
+    fn make_chain(router: Router) -> Chain {
         use ::iron_sessionstorage::SessionStorage;
         use ::iron_sessionstorage::backends::SignedCookieBackend;
 
@@ -71,20 +58,19 @@ impl Server<Chain> {
         let format = ::CONFIG.read().unwrap().get_str_or_default("logging.format", &default_format);
         let log_format = Format::new(&format);
 
-        let mut chain = Chain::new(router.internal_router);
+        let mut chain = Chain::new(router);
         let (logger_before, logger_after) = Logger::new(log_format);
         chain.link_before(logger_before);
         chain.link_before(ResponseTime);
-        chain.link_around(SessionStorage::new(SignedCookieBackend::new(read_cookies_secret())));
+        chain.link_around(SessionStorage::new(SignedCookieBackend::new(Server::read_cookies_secret())));
         chain.link_after(ResponseTime);
         chain.link_after(logger_after);
         chain
     }
 
     pub fn start(self) {
-        let port = ::CONFIG.read().unwrap().get_str_or_default("server.port", "3000");
-        let domain = ::CONFIG.read().unwrap().get_str_or_default("server.domain", "localhost");
-        let address: &str = &[domain, port].join(":");
+
+        let address: &str = &Server::read_server_address();
         if let Some(identity) = ::CONFIG.read().unwrap().get_str("tls.p12") {
             let p = ::std::path::Path::new(&identity);
             // openssl req -x509 -newkey rsa:4096 -nodes -keyout localhost.key -out localhost.crt -days 3650

@@ -9,12 +9,18 @@ slog = "*"
 slog-stream = "*"
 slog-stdlog = "*"
 config = "*"
-#config = {git = "https://github.com/frjonsen/config-rs.git"}
 log = "*"
 lazy_static = "0.2.2"
 hyper-native-tls = "0.2"
 router = "*"
 iron-sessionstorage = "*"
+hyper = "0.10.4"
+urlencoded = "*"
+plugin = "*"
+serde = "0.9.10"
+serde_derive = "0.9.10"
+serde_json = "0.9.8"
+
 
 [dependencies.iron]
 version = "*"
