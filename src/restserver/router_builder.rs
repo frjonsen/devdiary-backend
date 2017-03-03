@@ -7,9 +7,9 @@ use iron_sessionstorage::Value;
 use ::std::time::SystemTime;
 use restserver::handlers::*;
 
-pub struct RouterBuilder {
+pub struct RouterBuilder<C: Connection> {
     internal_router: Router,
-    connection: Arc<Connection>
+    connection: Arc<C>
 }
 
 fn hello_world(request: &mut Request) -> IronResult<Response> {
@@ -31,8 +31,8 @@ fn hello_world(request: &mut Request) -> IronResult<Response> {
     }
 }
 
-impl RouterBuilder {
-    pub fn new<C: Connection + 'static>(_connection: C) -> RouterBuilder {
+impl<C: Connection + 'static> RouterBuilder<C> {
+    pub fn new(_connection: C) -> RouterBuilder<C> {
         let mut router = Router::new();
         router.get("/", hello_world, "index");
         RouterBuilder {
@@ -41,12 +41,12 @@ impl RouterBuilder {
         }
     }
 
-    pub fn oauth(mut self) -> RouterBuilder {
-        self.internal_router.get("/oauthcallback", OAuthCallback::new(), "oauth_callback");
+    pub fn oauth(mut self) -> RouterBuilder<C> {
+        self.internal_router.get("/oauthcallback", OAuthCallback::new(self.connection.clone()), "oauth_callback");
         self
     }
 
-    pub fn finalize(mut self) -> Router {
+    pub fn finalize(self) -> Router {
         self.internal_router
     }
 }

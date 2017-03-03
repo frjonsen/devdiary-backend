@@ -1,10 +1,12 @@
-use ::iron::{Handler, IronResult, Response, Request, status};
+use ::database::Connection;
 use ::hyper::Client;
-use ::hyper_native_tls::NativeTlsClient;
-use ::hyper::net::HttpsConnector;
-use ::urlencoded::UrlEncodedQuery;
-use ::plugin::Pluggable;
 use ::hyper::header::{Headers, Accept, UserAgent};
+use ::hyper::net::HttpsConnector;
+use ::hyper_native_tls::NativeTlsClient;
+use ::iron::{Handler, IronResult, Response, Request, status};
+use ::plugin::Pluggable;
+use ::urlencoded::UrlEncodedQuery;
+use std::sync::Arc;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct AccessCode {
@@ -20,13 +22,14 @@ struct GithubUserInfo {
     name: String
 }
 
-pub struct OAuthCallback {
+pub struct OAuthCallback<C: Connection> {
     http_client: Client,
-    reply: String
+    reply: String,
+    connection: Arc<C>
 }
 
-impl OAuthCallback {
-    pub fn new() -> OAuthCallback {
+impl<C: Connection> OAuthCallback<C> {
+    pub fn new(_connection: Arc<C>) -> OAuthCallback<C> {
 
         let reply = format!("client_id={}&client_secret={}&code=",
             ::CONFIG.read().unwrap().get_str("github.client_id").unwrap(),
@@ -38,7 +41,8 @@ impl OAuthCallback {
 
         OAuthCallback {
             http_client: Client::with_connector(connector),
-            reply: reply
+            reply: reply,
+            connection: _connection
          }
     }
 
@@ -87,7 +91,7 @@ impl OAuthCallback {
     }
 }
 
-impl Handler for OAuthCallback {
+impl<C: Connection + 'static> Handler for OAuthCallback<C> {
 
     fn handle(&self, request: &mut Request) -> IronResult<Response> {
         use ::std::error::Error;
