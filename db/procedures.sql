@@ -21,7 +21,7 @@ END IF;
   INSERT INTO LocalUser(id, password) VALUES (_new_user.id, crypt("pwd", gen_salt('bf', 10)));
   RETURN _new_user;
 END
-$$ LANGUAGE 'plpgsql';
+$$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION create_github_user(uname text, _github_access_token text, fname text = NULL)
 RETURNS Person AS
@@ -32,7 +32,7 @@ BEGIN
   INSERT INTO Person(username, fullname) VALUES (uname, fname) RETURNING Person.id, Person.username, Person.fullname INTO _new_user;
   INSERT INTO GithubUser(id, github_access_token) VALUES (_new_user.id, _github_access_token);
   RETURN _new_user;
-END $$ LANGUAGE 'plpgsql';
+END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION authenticate_github_user(_github_access_token TEXT)
 RETURNS SETOF Person AS
@@ -40,7 +40,7 @@ $$
 BEGIN
   RETURN QUERY SELECT * FROM Person WHERE Person.id = (SELECT GithubUser.id FROM GithubUser WHERE github_access_token = _github_access_token);
 END
-$$ LANGUAGE 'plpgsql';
+$$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION authenticate_local_user(uname text, pwd text)
 RETURNS SETOF Person AS
@@ -48,7 +48,7 @@ $$
 BEGIN
   RETURN QUERY SELECT * FROM Person WHERE username=uname AND (EXISTS(SELECT id FROM LocalUser WHERE Person.id = LocalUser.id AND password=crypt(pwd, password)));
 END
-$$ LANGUAGE 'plpgsql';
+$$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION get_user(_id uuid = NULL, _username text = NULL)
 RETURNS SETOF Person AS
@@ -63,7 +63,7 @@ BEGIN
   ELSE
     RAISE 'Must specify at least one parameter' using ERRCODE='invalid_parameter_value';
   END IF;
-END $$ LANGUAGE 'plpgsql';
+END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION change_password(_id uuid, pwd text)
 RETURNS BOOLEAN AS
@@ -77,7 +77,7 @@ BEGIN
     RETURN FALSE;
   END IF;
 END
-$$ LANGUAGE 'plpgsql';
+$$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION generate_session_token()
 RETURNS Text AS 
@@ -93,7 +93,7 @@ BEGIN
     ) AS y(x)
   ) INTO token;
   RETURN token;
-END $$ LANGUAGE 'plpgsql';
+END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION create_new_session(_id uuid)
 RETURNS Text AS
@@ -115,7 +115,7 @@ BEGIN
   INSERT INTO Session(token, person_id) VALUES (_token, _id);
   
   RETURN (SELECT _token);
-END $$ LANGUAGE 'plpgsql';
+END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION remove_session(_token Text)
 RETURNS BOOLEAN AS
@@ -125,14 +125,14 @@ BEGIN
     RAISE 'No session with token "_token"' using ERRCODE='invalid_parameter_value';
   END IF;
   
-END $$ LANGUAGE 'plpgsql';
+END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION clear_all_users_sessions(id uuid)
 RETURNS VOID AS
 $$
 BEGIN
   DELETE FROM Session WHERE person_id = id;
-END $$ LANGUAGE 'plpgsql';
+END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION access_session_token(_token Text, update_access BOOLEAN = TRUE, token_valid_duration Text = NULL)
 RETURNS TABLE(id uuid, username Text, fullname text) AS
@@ -163,10 +163,9 @@ BEGIN
   END IF;
   
   RETURN QUERY SELECT Person.id, Person.username, Person.fullname FROM Person WHERE Person.id = _session.person_id;
-END $$ LANGUAGE 'plpgsql';
+END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 SELECT * FROM create_github_user('ausername', 'apassword');
 /*SELECT create_new_session((SELECT id FROM Person));
 SELECT * FROM access_session_token((SELECT token FROM Session));*/
 SELECT * FROM get_user(NULL, 'ausername');
-SELECT * FROM GithubUser;
