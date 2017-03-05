@@ -1,5 +1,7 @@
-pub mod connection;
-pub mod postgresql_connection;
+pub mod postgres_connection;
+mod connection;
 
 pub use self::connection::Connection;
-pub use self::postgresql_connection::PostgresqlConnection;
+pub use self::postgres_connection::*;
+
+pub type QueryResult<T> = Result<Option<T>, String>;

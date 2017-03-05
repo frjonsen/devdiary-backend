@@ -39,8 +39,9 @@ impl Server<Chain> {
     }
 
     fn read_server_address() -> String {
-        let port = ::CONFIG.read().unwrap().get_str_or_default("server.port", "3000");
-        let domain = ::CONFIG.read().unwrap().get_str_or_default("server.domain", "localhost");
+        let config = ::CONFIG.read().unwrap();
+        let port = config.get_str_or_default("server.port", "3000");
+        let domain = config.get_str_or_default("server.domain", "localhost");
         return [domain, port].join(":");
     }
 
@@ -76,9 +77,11 @@ impl Server<Chain> {
             // openssl req -x509 -newkey rsa:4096 -nodes -keyout localhost.key -out localhost.crt -days 3650
             // openssl pkcs12 -export -out identity.p12 -inkey localhost.key -in localhost.crt --password mypass
             let ssl = ::hyper_native_tls::NativeTlsServer::new(p, "").unwrap();
+            println!{"Listening on https://{}", address}
             self.internal_server.https(address, ssl).unwrap();
         }
         else {
+            println!{"Listening on http://{}", address}
             self.internal_server.http(address).unwrap();
         }
 

@@ -7,19 +7,13 @@ use ::iron::{Handler, IronResult, Response, Request, status};
 use ::plugin::Pluggable;
 use ::urlencoded::UrlEncodedQuery;
 use std::sync::Arc;
+use ::entities::{GithubUserInfo,User};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct AccessCode {
     access_token: String,
     token_type: String,
     scope: String
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct GithubUserInfo {
-    login: String,
-    id: i64,
-    name: String
 }
 
 pub struct OAuthCallback<C: Connection> {
@@ -62,9 +56,10 @@ impl<C: Connection> OAuthCallback<C> {
         .map_err(|e| e.description().to_owned()))
     }
 
-    fn save_new_user(&self, user: GithubUserInfo) -> Result<String, String> {
-        println!("{:?}", user);
-        Ok("Save successful".to_owned())
+    // This should not attempt to create a new user if it already exists (rename postgres function to create_or_get_github_user)
+    fn save_new_user(&self, user: GithubUserInfo) -> Result<User, String> {
+        self.connection.new_github_user(&user)
+        .and_then(|o| o.ok_or("Failed to create user for unknown reason".to_owned()))
     }
 
     fn handle_access_reply(&self, response: ::hyper::client::Response) -> Result<AccessCode, String> {
@@ -103,7 +98,7 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
         .and_then(|user| self.save_new_user(user));
 
         match result {
-            Ok(res) => Ok(Response::with((status::Ok, res))),
+            Ok(res) => Ok(Response::with((status::Ok, format!("{:?}", res)))),
             Err(err) => Ok(Response::with((status::BadRequest, err)))
         }
     }

@@ -15,11 +15,16 @@ extern crate slog_stream;
 extern crate time;
 extern crate serde_json;
 extern crate urlencoded;
+extern crate postgres;
+extern crate r2d2;
+extern crate r2d2_postgres;
+extern crate uuid;
 
 mod database;
 mod default_config;
 mod restserver;
-use database::PostgresqlConnection;
+mod entities;
+use database::postgres_connection::{PostgresConnection,ConnectionStringConfig};
 use default_config::DefaultConfig;
 use restserver::{RouterBuilder, Server};
 use slog::DrainExt;
@@ -47,6 +52,18 @@ impl slog_stream::Format for MyFormat {
     }
 }
 
+fn build_connection_settings() -> ConnectionStringConfig {
+    let config = CONFIG.read().unwrap();
+    ConnectionStringConfig {
+        host: config.get_str_or_default("database.host", "localhost"),
+        port: (config.get_int_or_default("database.port", 5432i64) as u64),
+        user: config.get_str("database.username").unwrap(),
+        password: config.get_str_or_default("database.password", ""),
+        database: config.get_str("database.database").unwrap(),
+        identifier: config.get_str("database.identifier")
+    }
+}
+
 /// This function will expect the 'file' and 'format' arguments to be present in the config
 fn setup_logging() {
     let file = CONFIG.read().unwrap().get_str_or_default("logging.file", "log.log");
@@ -64,7 +81,8 @@ fn setup_logging() {
 
 fn main() {
     setup_logging();
-    let router = RouterBuilder::new(PostgresqlConnection{})
+    let settings = build_connection_settings();
+    let router = RouterBuilder::new(PostgresConnection::new(settings))
     .oauth()
     .finalize();
     let s = Server::new(router);
