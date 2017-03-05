@@ -9,7 +9,7 @@ use ::urlencoded::UrlEncodedQuery;
 use std::sync::Arc;
 use ::entities::{GithubUserInfo,User};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct AccessCode {
     access_token: String,
     token_type: String,
@@ -105,16 +105,59 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
 }
 
 #[cfg(test)]
+
+
+#[cfg(test)]
 mod test {
+    use super::OAuthCallback;
+    use super::Connection;
     use ::database::postgres_connection::MockPostgresConnection;
     use std::sync::Arc;
+    use ::hyper;
 
-    fn create_oauth() -> super::OAuthCallback<MockPostgresConnection> {
-        let mock = MockPostgresConnection{};
-        let arc: Arc<MockPostgresConnection> = Arc::new(mock);
-        super::OAuthCallback::new(arc)
+    impl <C: Connection> OAuthCallback<C> {
+        fn new_test(_connection: Arc<C>) -> OAuthCallback<C> {
+            OAuthCallback {
+                http_client: create_mock_http(),
+                reply: "Unused in tests".to_owned(),
+                connection: _connection
+            }
+        }
     }
 
-    // #[test]
-    // https://github.com/Byron/yup-hyper-mock
+    fn create_mock_http() -> ::hyper::Client {
+        mock_connector!(MockRedirectPolicy {
+            "https://github.com" => "HTTP/1.1 200 OK\r\n\
+                                    Server: mock3\r\n\
+                                    \r\n\
+                                    {
+                                    \"access_token\": \"sometoken\",
+                                    \"token_type\": \"sometype\",
+                                    \"scope\": \"user:email\"
+                                    }
+                                    "
+        });
+
+        let mut client = ::hyper::Client::with_connector(MockRedirectPolicy::default());
+        client.set_redirect_policy(::hyper::client::RedirectPolicy::FollowAll);
+        client
+    }
+
+    fn create_oauth() -> OAuthCallback<MockPostgresConnection> {
+        let mock = MockPostgresConnection{};
+        let arc: Arc<MockPostgresConnection> = Arc::new(mock);
+        super::OAuthCallback::new_test(arc)
+    }
+
+    #[test]
+    fn test_valid_access_code_reply() {
+        let oauth = create_oauth();
+        let reply = oauth.access_code_reply("somecode");
+        let expected = super::AccessCode {
+            access_token: "sometoken".to_owned(),
+            token_type: "sometype".to_owned(),
+            scope: "user:email".to_owned()
+        };
+        assert_eq!(expected, reply.unwrap());
+    }
 }
