@@ -11,3 +11,6 @@ port = 8080
 
 [configs]
 secrets = "secrets.toml"
+
+[sessions]
+duration = 604800 # Seconds in one week

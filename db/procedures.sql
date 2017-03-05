@@ -16,21 +16,27 @@ IF LENGTH(pwd) < 5 THEN
 ELSIF LENGTH(pwd) > 72 THEN
   RAISE 'Password too long, must be shorter than 72 characters' using ERRCODE='invalid_parameter_value';
 END IF;
-
   INSERT INTO Person(username, fullname) VALUES (uname, fname) RETURNING Person.id, Person.username, Person.fullname INTO _new_user;
   INSERT INTO LocalUser(id, password) VALUES (_new_user.id, crypt("pwd", gen_salt('bf', 10)));
   RETURN _new_user;
 END
 $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION create_github_user(uname text, _github_access_token text, fname text = NULL)
+CREATE OR REPLACE FUNCTION create_or_get_github_user(uname text, _github_access_token text, fname text = NULL)
 RETURNS Person AS
 $$
 DECLARE
   _new_user Person;
+  dupe_user_id UUID;
 BEGIN
-  INSERT INTO Person(username, fullname) VALUES (uname, fname) RETURNING Person.id, Person.username, Person.fullname INTO _new_user;
-  INSERT INTO GithubUser(id, github_access_token) VALUES (_new_user.id, _github_access_token);
+  -- Check if user already exists
+  SELECT id FROM GithubUser WHERE github_access_token = _github_access_token INTO dupe_user_id;
+  IF FOUND THEN
+    SELECT * FROM Person WHERE Person.id = dupe_user_id INTO _new_user;
+  ELSE
+    INSERT INTO Person(username, fullname) VALUES (uname, fname) RETURNING Person.id, Person.username, Person.fullname INTO _new_user;
+    INSERT INTO GithubUser(id, github_access_token) VALUES (_new_user.id, _github_access_token);
+  END IF;
   RETURN _new_user;
 END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
@@ -70,12 +76,7 @@ RETURNS BOOLEAN AS
 $$
 BEGIN
   UPDATE LocalUser SET password = (crypt("pwd", gen_salt('bf', 10))) WHERE Person.id = _id;
-
-  IF FOUND THEN
-    RETURN TRUE;
-  ELSE
-    RETURN FALSE;
-  END IF;
+  RETURN FOUND;
 END
 $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
@@ -96,9 +97,10 @@ BEGIN
 END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION create_new_session(_id uuid)
-RETURNS Text AS
+RETURNS Session AS
 $$
 DECLARE
+  _session Session;
   _token text;
 BEGIN
   IF (SELECT NOT EXISTS(SELECT Person.id FROM Person WHERE Person.id = _id)) THEN
@@ -112,9 +114,9 @@ BEGIN
     END IF;
   END LOOP;
 
-  INSERT INTO Session(token, person_id) VALUES (_token, _id);
+  INSERT INTO Session(token, person_id) VALUES (_token, _id) RETURNING * INTO _session;
   
-  RETURN (SELECT _token);
+  RETURN _session;
 END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION remove_session(_token Text)
@@ -165,7 +167,6 @@ BEGIN
   RETURN QUERY SELECT Person.id, Person.username, Person.fullname FROM Person WHERE Person.id = _session.person_id;
 END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
-SELECT * FROM create_github_user('ausername', 'apassword');
-/*SELECT create_new_session((SELECT id FROM Person));
-SELECT * FROM access_session_token((SELECT token FROM Session));*/
-SELECT * FROM get_user(NULL, 'ausername');
+SELECT * FROM create_or_get_github_user('ausername', 'apassword');
+
+SELECT * FROM create_new_session((SELECT id FROM Person));

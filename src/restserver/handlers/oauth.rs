@@ -103,3 +103,18 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use ::database::postgres_connection::MockPostgresConnection;
+    use std::sync::Arc;
+
+    fn create_oauth() -> super::OAuthCallback<MockPostgresConnection> {
+        let mock = MockPostgresConnection{};
+        let arc: Arc<MockPostgresConnection> = Arc::new(mock);
+        super::OAuthCallback::new(arc)
+    }
+
+    // #[test]
+    // https://github.com/Byron/yup-hyper-mock
+}

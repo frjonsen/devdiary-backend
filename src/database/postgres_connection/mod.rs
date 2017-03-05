@@ -1,5 +1,7 @@
-mod postgres_connection;
+#[cfg(test)]pub mod mock_postgres_connection;
+#[cfg(test)]pub use self::mock_postgres_connection::MockPostgresConnection;
 
+mod postgres_connection;
 pub use self::postgres_connection::PostgresConnection;
 pub use self::postgres_connection::ConnectionStringConfig;
 use ::entities::*;
