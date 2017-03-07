@@ -1,6 +1,6 @@
 use ::entities::{Session, User};
 
-pub trait Connection: Send +  Sync{
+pub trait Connection: Send + Sync{
 
     /// Returns a user with the given id and username. At least on argument must
     /// be specified.
@@ -18,5 +18,9 @@ pub trait Connection: Send +  Sync{
     ///
     fn new_github_user(&self, user: &::entities::GithubUserInfo) -> super::QueryResult<::entities::User>;
 
-    //fn create_session(&self, user: &::entities::User, duration: u64) -> QueryResult<::entities::Session>;
+    // Creates a new session for the specified user.
+    //
+    // # Arguments
+    // * `user` - The user to create a new session for
+    //fn create_session(&self, user: &::entities::User) -> QueryResult<::entities::Session>;
 }

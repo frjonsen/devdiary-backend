@@ -1,4 +1,5 @@
 use ::database::Connection;
+use ::entities::{GithubUserInfo,User};
 use ::hyper::Client;
 use ::hyper::header::{Headers, Accept, UserAgent};
 use ::hyper::net::HttpsConnector;
@@ -6,8 +7,22 @@ use ::hyper_native_tls::NativeTlsClient;
 use ::iron::{Handler, IronResult, Response, Request, status};
 use ::plugin::Pluggable;
 use ::urlencoded::UrlEncodedQuery;
-use std::sync::Arc;
-use ::entities::{GithubUserInfo,User};
+use std::collections::HashMap;
+use std::sync::{Arc,RwLock};
+
+// This is a pretty ugly workaround for the test mocking. Mocking library
+// only allows for a single reply per domain, so we need to use different
+// URLs when testing. Bad practice, but no alternatives available. This
+// also means we only get one test per funciton, so can only test valid
+// replies, which is dumb.
+lazy_static! {
+    static ref GITHUB_ENDPOINTS: RwLock<HashMap<&'static str, &'static str>> = {
+        let mut m = HashMap::new();
+        m.insert("user_info", "https://api.github.com/user");
+        m.insert("access_code", "https://github.com/login/oauth/access_token");
+        RwLock::new(m)
+    };
+}
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct AccessCode {
@@ -37,14 +52,15 @@ impl<C: Connection> OAuthCallback<C> {
             http_client: Client::with_connector(connector),
             reply: reply,
             connection: _connection
-         }
+        }
     }
 
     fn get_user_info(&self, token: AccessCode) -> Result<GithubUserInfo, String> {
         use ::std::io::Read;
         use ::std::error::Error;
 
-        let url = format!("https://api.github.com/user?access_token={}", token.access_token);
+        let url = format!("{}?access_token={}", GITHUB_ENDPOINTS.read().unwrap().get("user_info").unwrap(), token.access_token);
+        println!("{}", url);
         let mut headers = Headers::new();
         headers.set(Accept::json());
         headers.set(UserAgent("DevDiary".to_owned()));
@@ -77,7 +93,7 @@ impl<C: Connection> OAuthCallback<C> {
         let mut headers = Headers::new();
         headers.set(Accept::json());
 
-        self.http_client.post("https://github.com/login/oauth/access_token")
+        self.http_client.post(*GITHUB_ENDPOINTS.read().unwrap().get("access_code").unwrap())
         .body(&body)
         .headers(headers)
         .send()
@@ -105,9 +121,6 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
 }
 
 #[cfg(test)]
-
-
-#[cfg(test)]
 mod test {
     use super::OAuthCallback;
     use super::Connection;
@@ -126,16 +139,36 @@ mod test {
     }
 
     fn create_mock_http() -> ::hyper::Client {
+        let mut urls = super::GITHUB_ENDPOINTS.write().unwrap();
+        //urls.insert("user_info", "https://validuserinfourl.com");
+        urls.insert("access_code", "https://validaccesscodeurl.com");
         mock_connector!(MockRedirectPolicy {
-            "https://github.com" => "HTTP/1.1 200 OK\r\n\
-                                    Server: mock3\r\n\
-                                    \r\n\
-                                    {
-                                    \"access_token\": \"sometoken\",
-                                    \"token_type\": \"sometype\",
-                                    \"scope\": \"user:email\"
-                                    }
-                                    "
+            "https://validaccesscodeurl.com" => "HTTP/1.1 200 OK\r\n\
+                                            Server: mock3\r\n\
+                                            \r\n\
+                                            {
+                                            \"access_token\": \"sometoken\",
+                                            \"token_type\": \"sometype\",
+                                            \"scope\": \"user:email\"
+                                            }
+                                            "
+            "https://validuserinfourl.com"   => "HTTP/1.1 200 OK\r\n\
+                                            Server: mock3\r\n\
+                                            \r\n\
+                                            {
+                                            \"login\": \"someusername\",
+                                            \"id\": 741852963,
+                                            \"name\": \"some realname\"
+                                            }
+                                            "
+            "https://invaliduserinfourl.com" => "HTTP/1.1 404 Not Found\r\n\
+                                            Server: mock3\r\n\
+                                            \r\n\
+                                            {
+                                            \"message\": \"Not Found\",
+                                            \"documentation_url\": \"https://developer.github.com/v3\"
+                                            }
+                                            "
         });
 
         let mut client = ::hyper::Client::with_connector(MockRedirectPolicy::default());
@@ -159,5 +192,36 @@ mod test {
             scope: "user:email".to_owned()
         };
         assert_eq!(expected, reply.unwrap());
+    }
+
+    #[test]
+    #[ignore]
+    fn test_valid_user_info_reply() {
+        let accesscode = super::AccessCode {
+            access_token: "Sometoken".to_owned(),
+            token_type: "Notused".to_owned(),
+            scope: "Notused".to_owned()
+        };
+        let expected = super::GithubUserInfo {
+            login: "someusername".to_owned(),
+            id: 741852963,
+            name: "some realname".to_owned()
+        };
+        let oauth = create_oauth();
+        let reply = oauth.get_user_info(accesscode);
+        assert_eq!(expected, reply.unwrap());
+    }
+
+    #[test]
+    fn test_invalid_user_info_reply() {
+        super::GITHUB_ENDPOINTS.write().unwrap().insert("user_info", "https://invaliduserinfourl.com");
+        let accesscode = super::AccessCode {
+            access_token: "Someothertoken".to_owned(),
+            token_type: "Notused".to_owned(),
+            scope: "Notused".to_owned()
+        };
+        let oauth = create_oauth();
+        let reply = oauth.get_user_info(accesscode);
+        println!("{:?}", reply);
     }
 }
