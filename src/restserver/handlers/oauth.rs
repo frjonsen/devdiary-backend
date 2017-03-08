@@ -10,11 +10,6 @@ use ::urlencoded::UrlEncodedQuery;
 use std::collections::HashMap;
 use std::sync::{Arc,RwLock};
 
-// This is a pretty ugly workaround for the test mocking. Mocking library
-// only allows for a single reply per domain, so we need to use different
-// URLs when testing. Bad practice, but no alternatives available. This
-// also means we only get one test per funciton, so can only test valid
-// replies, which is dumb.
 lazy_static! {
     static ref GITHUB_ENDPOINTS: RwLock<HashMap<&'static str, &'static str>> = {
         let mut m = HashMap::new();
@@ -68,11 +63,23 @@ impl<C: Connection> OAuthCallback<C> {
         .headers(headers)
         .send()
         .map_err(|e| e.description().to_owned())
+        .and_then(|response| {
+            match response.status {
+                ::hyper::status::StatusCode::Ok => Ok(response),
+                _ => {
+                    match response.status.canonical_reason() {
+                        Some(ref reason) => Err(reason.to_string()),
+                        _ => Err("Authentication failed".to_owned())
+                    }
+                }
+            }
+        })
         .and_then(|res| ::serde_json::from_iter::<::std::io::Bytes<_>, GithubUserInfo>(res.bytes())
         .map_err(|e| e.description().to_owned()))
     }
 
-    // This should not attempt to create a new user if it already exists (rename postgres function to create_or_get_github_user)
+    // This should not attempt to create a new user if it already exists
+    // (rename postgres function to create_or_get_github_user)
     fn save_new_user(&self, user: GithubUserInfo) -> Result<User, String> {
         self.connection.new_github_user(&user)
         .and_then(|o| o.ok_or("Failed to create user for unknown reason".to_owned()))
@@ -127,6 +134,12 @@ mod test {
     use ::database::postgres_connection::MockPostgresConnection;
     use std::sync::Arc;
     use ::hyper;
+    // This is a terribly ugly way to solve race conditions, but since it's just
+    // for the test, it's not worth changing the "real" code to make it work. Decent
+    // solution would be to just use a better mocking library, if one existed.
+    lazy_static! {
+        static ref ENDPOINTS_LOCK: ::std::sync::Mutex<i32> = ::std::sync::Mutex::new(5);
+    }
 
     impl <C: Connection> OAuthCallback<C> {
         fn new_test(_connection: Arc<C>) -> OAuthCallback<C> {
@@ -140,7 +153,7 @@ mod test {
 
     fn create_mock_http() -> ::hyper::Client {
         let mut urls = super::GITHUB_ENDPOINTS.write().unwrap();
-        //urls.insert("user_info", "https://validuserinfourl.com");
+        println!("Set user_info valid");
         urls.insert("access_code", "https://validaccesscodeurl.com");
         mock_connector!(MockRedirectPolicy {
             "https://validaccesscodeurl.com" => "HTTP/1.1 200 OK\r\n\
@@ -152,7 +165,7 @@ mod test {
                                             \"scope\": \"user:email\"
                                             }
                                             "
-            "https://validuserinfourl.com"   => "HTTP/1.1 200 OK\r\n\
+            "https://validuserinfourl.com"  => "HTTP/1.1 200 OK\r\n\
                                             Server: mock3\r\n\
                                             \r\n\
                                             {
@@ -184,6 +197,7 @@ mod test {
 
     #[test]
     fn test_valid_access_code_reply() {
+
         let oauth = create_oauth();
         let reply = oauth.access_code_reply("somecode");
         let expected = super::AccessCode {
@@ -195,8 +209,8 @@ mod test {
     }
 
     #[test]
-    #[ignore]
     fn test_valid_user_info_reply() {
+
         let accesscode = super::AccessCode {
             access_token: "Sometoken".to_owned(),
             token_type: "Notused".to_owned(),
@@ -208,20 +222,27 @@ mod test {
             name: "some realname".to_owned()
         };
         let oauth = create_oauth();
-        let reply = oauth.get_user_info(accesscode);
-        assert_eq!(expected, reply.unwrap());
+        {
+            let lock = ENDPOINTS_LOCK.lock();
+            super::GITHUB_ENDPOINTS.write().unwrap().insert("user_info", "https://validuserinfourl.com");
+            let reply = oauth.get_user_info(accesscode);
+            assert_eq!(expected, reply.unwrap());
+        }
     }
 
     #[test]
     fn test_invalid_user_info_reply() {
-        super::GITHUB_ENDPOINTS.write().unwrap().insert("user_info", "https://invaliduserinfourl.com");
+        let oauth = create_oauth();
         let accesscode = super::AccessCode {
             access_token: "Someothertoken".to_owned(),
             token_type: "Notused".to_owned(),
             scope: "Notused".to_owned()
         };
-        let oauth = create_oauth();
-        let reply = oauth.get_user_info(accesscode);
-        println!("{:?}", reply);
+        {
+            let lock = ENDPOINTS_LOCK.lock();
+            super::GITHUB_ENDPOINTS.write().unwrap().insert("user_info", "https://invaliduserinfourl.com");
+            let reply = oauth.get_user_info(accesscode);
+            assert_eq!(reply.unwrap_err(), "Not Found".to_owned());
+        }
     }
 }
