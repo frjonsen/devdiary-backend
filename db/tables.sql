@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS Post(
 );
 
 CREATE TABLE IF NOT EXISTS Session(
-  token char(80) PRIMARY KEY,
+  token Text PRIMARY KEY,
   person_id uuid NOT NULL REFERENCES Person(id),
   created timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL,
   access timestamptz DEFAULT CURRENT_TIMESTAMP NOT NULL

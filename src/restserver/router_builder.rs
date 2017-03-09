@@ -34,7 +34,7 @@ fn hello_world(request: &mut Request) -> IronResult<Response> {
 impl<C: Connection + 'static> RouterBuilder<C> {
     pub fn new(_connection: C) -> RouterBuilder<C> {
         let mut router = Router::new();
-        router.get("/", hello_world, "index");
+        //router.get("/", hello_world, "index");
         RouterBuilder {
             internal_router: router,
             connection: Arc::new(_connection)

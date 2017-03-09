@@ -77,7 +77,7 @@ impl super::super::Connection for PostgresConnection {
         });
     }
 
-    fn new_github_user(&self, user: &::entities::GithubUserInfo) -> QueryResult<User> {
+    fn new_github_user(&self, user: &GithubUserInfo) -> QueryResult<User> {
         let connection = self.pool.get().unwrap();
         let query = connection.query("SELECT * FROM create_or_get_github_user($1, $2, $3)", &[&user.login, &user.id.to_string(), &user.name]);
         return query.map_err(|e| e.description().to_owned())
@@ -89,8 +89,17 @@ impl super::super::Connection for PostgresConnection {
         });
     }
 
-    //  fn create_session(&self, user: &::entities::User, duration: u64) -> QueryResult<Session> {
-    //     let connection = self.pool.get().unwrap();
-    //     let query = connection.query("SELECT * FROM ")
-    //  }
+     fn create_session(&self, user: &User) -> QueryResult<Session> {
+        let connection = self.pool.get().unwrap();
+        let uuid = ::uuid::Uuid::parse_str(&user.id).unwrap();
+        let query = connection.query("SELECT * FROM create_new_session($1)", &[&uuid]);
+        println!("{:?}", query);
+        return query.map_err(|e| e.description().to_owned())
+        .and_then(|rows| {
+            match rows.is_empty() {
+                true => Ok(None),
+                false => Ok(Session::from_sql_row(rows.get(0)))
+            }
+        });
+     }
 }

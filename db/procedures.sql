@@ -97,26 +97,27 @@ BEGIN
 END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION create_new_session(_id uuid)
-RETURNS Session AS
+RETURNS Text AS
 $$
 DECLARE
-  _session Session;
   _token text;
 BEGIN
   IF (SELECT NOT EXISTS(SELECT Person.id FROM Person WHERE Person.id = _id)) THEN
     RAISE 'User does not exist' using ERRCODE='invalid_parameter_value';
   END IF;
-  
+  /*
   LOOP
     SELECT generate_session_token() INTO _token;
     IF (SELECT NOT EXISTS(SELECT Session.token FROM Session WHERE Session.token = _token)) THEN
       EXIT;
     END IF;
-  END LOOP;
+  END LOOP;*/
 
-  INSERT INTO Session(token, person_id) VALUES (_token, _id) RETURNING * INTO _session;
+  SELECT * FROM replace(concat(gen_random_uuid(), gen_random_uuid()), '-', '') INTO _token;
+
+  INSERT INTO Session(token, person_id) VALUES (_token, _id);
   
-  RETURN _session;
+  RETURN _token;
 END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION remove_session(_token Text)

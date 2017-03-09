@@ -1,5 +1,5 @@
 use ::database::Connection;
-use ::entities::{GithubUserInfo,User};
+use ::entities::{GithubUserInfo,User,Session};
 use ::hyper::Client;
 use ::hyper::header::{Headers, Accept, UserAgent};
 use ::hyper::net::HttpsConnector;
@@ -85,6 +85,11 @@ impl<C: Connection> OAuthCallback<C> {
         .and_then(|o| o.ok_or("Failed to create user for unknown reason".to_owned()))
     }
 
+    fn create_session(&self, user: &User) -> Result<Session, String> {
+        self.connection.create_session(&user)
+        .and_then(|res| res.ok_or("Failed to create session for unknown reason".to_owned()))
+    }
+
     fn handle_access_reply(&self, response: ::hyper::client::Response) -> Result<AccessCode, String> {
         use ::std::io::Read;
         use ::std::error::Error;
@@ -113,12 +118,18 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
 
     fn handle(&self, request: &mut Request) -> IronResult<Response> {
         use ::std::error::Error;
+        use ::iron_sessionstorage::SessionRequestExt;
         let result = request.get_ref::<UrlEncodedQuery>()
         .map_err(|e| e.description().to_owned())
         .and_then(|hashmap| hashmap.get("code").unwrap().get(0).ok_or("Parameter \"code\" missing".to_owned()))
         .and_then(|code| self.access_code_reply(code))
         .and_then(|access_code| self.get_user_info(access_code))
-        .and_then(|user| self.save_new_user(user));
+        .and_then(|user| self.save_new_user(user))
+        .and_then(|user| self.create_session(&user))
+        .and_then(|session| {
+            request.session().set(session);
+            Ok(())
+        });
 
         match result {
             Ok(res) => Ok(Response::with((status::Ok, format!("{:?}", res)))),

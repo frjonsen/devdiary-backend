@@ -24,3 +24,12 @@ impl FromSqlRow for User {
         Some(user)
     }
 }
+
+impl FromSqlRow for Session {
+    fn from_sql_row(row: Row) -> Option<Self> {
+
+        Some(Session {
+            token: row.get(0),
+        })
+    }
+}

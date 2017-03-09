@@ -1,4 +1,5 @@
-use ::entities::{Session, User};
+use ::entities::{Session, User, GithubUserInfo};
+use super::QueryResult;
 
 pub trait Connection: Send + Sync{
 
@@ -8,7 +9,7 @@ pub trait Connection: Send + Sync{
     /// # Arguments
     /// * `id` - id of the user, may be None
     /// * `username - username of the user, may be None
-    fn get_user(&self, id: Option<String>, username: Option<String>) -> super::QueryResult<::entities::User>;
+    fn get_user(&self, id: Option<String>, username: Option<String>) -> QueryResult<::entities::User>;
 
     /// Creates or gets a github user, using the supplied info. If a user with the specified id already exists,
     /// the existing user will be returned instead. This function can thus be used both for registration and login
@@ -16,11 +17,11 @@ pub trait Connection: Send + Sync{
     /// # Arguments
     /// * `user`: The information, from github, used to create or get a user
     ///
-    fn new_github_user(&self, user: &::entities::GithubUserInfo) -> super::QueryResult<::entities::User>;
+    fn new_github_user(&self, user: &GithubUserInfo) -> QueryResult<::entities::User>;
 
     // Creates a new session for the specified user.
     //
     // # Arguments
     // * `user` - The user to create a new session for
-    //fn create_session(&self, user: &::entities::User) -> QueryResult<::entities::Session>;
+    fn create_session(&self, user: &User) -> QueryResult<::entities::Session>;
 }

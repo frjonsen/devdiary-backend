@@ -14,11 +14,17 @@ impl super::super::Connection for MockPostgresConnection {
         Ok(Some(user))
     }
 
-    fn new_github_user(&self, user: &::entities::GithubUserInfo) -> QueryResult<User> {
+    fn new_github_user(&self, user: &GithubUserInfo) -> QueryResult<User> {
         Ok(Some(User {
             username: user.login.clone(),
             id: "testid".to_owned(),
             fullname: Some(user.name.clone())
+        }))
+    }
+
+    fn create_session(&self, user: &User) -> QueryResult<Session> {
+        Ok(Some(Session {
+            token: "sometoken".to_owned()
         }))
     }
 }

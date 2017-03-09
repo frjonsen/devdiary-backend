@@ -51,6 +51,17 @@ impl Server<Chain> {
         as_bytes.to_vec()
     }
 
+    fn set_session_cookie_attrs(mut cookie: ::iron_sessionstorage::cookie::Cookie) -> Cookie {
+        if let Some(valid_seconds) = ::CONFIG.read().unwrap().get_int("sessions.duration") {
+            use ::std::ops::Add;
+            let duration = ::time::Duration::seconds(valid_seconds);
+            let expires = ::time::now().add(duration);
+            println!("Set to expire at {:?}", expires);
+            cookie.expires = Some(expires);
+        }
+        cookie
+    }
+
     fn make_chain(router: Router) -> Chain {
         use ::iron_sessionstorage::SessionStorage;
         use ::iron_sessionstorage::backends::SignedCookieBackend;
@@ -63,7 +74,9 @@ impl Server<Chain> {
         let (logger_before, logger_after) = Logger::new(log_format);
         chain.link_before(logger_before);
         chain.link_before(ResponseTime);
-        chain.link_around(SessionStorage::new(SignedCookieBackend::new(Server::read_cookies_secret())));
+        let mut backend = SignedCookieBackend::new(Server::read_cookies_secret());
+        backend.set_cookie_modifier(Server::set_session_cookie_attrs);
+        chain.link_around(SessionStorage::new(backend));
         chain.link_after(ResponseTime);
         chain.link_after(logger_after);
         chain
