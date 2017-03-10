@@ -18,6 +18,7 @@ extern crate serde_json;
 extern crate slog_stdlog;
 extern crate slog_stream;
 extern crate time;
+extern crate url;
 extern crate urlencoded;
 extern crate uuid;
 

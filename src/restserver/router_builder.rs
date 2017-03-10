@@ -13,7 +13,7 @@ pub struct RouterBuilder<C: Connection> {
 }
 
 fn hello_world(request: &mut Request) -> IronResult<Response> {
-    use ::entities::Session;
+    /*use ::entities::Session;
     let localtime = ::time::now().rfc822().to_string();
     if let Ok(Some(session)) = request.session().get::<Session>() {
         let sess = session.into_raw();
@@ -28,13 +28,14 @@ fn hello_world(request: &mut Request) -> IronResult<Response> {
             token: localtime
         });
         Ok(Response::with((::iron::status::Ok, "No session cookie found")))
-    }
+    }*/
+    Ok(Response::with((::iron::status::Ok, "Hello, you were redirected")))
 }
 
 impl<C: Connection + 'static> RouterBuilder<C> {
     pub fn new(_connection: Arc<C>) -> RouterBuilder<C> {
         let mut router = Router::new();
-        //router.get("/", hello_world, "index");
+        router.get("/", hello_world, "index");
         RouterBuilder {
             internal_router: router,
             connection: _connection

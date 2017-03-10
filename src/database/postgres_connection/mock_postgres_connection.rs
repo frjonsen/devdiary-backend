@@ -27,4 +27,12 @@ impl super::super::Connection for MockPostgresConnection {
             token: "sometoken".to_owned()
         }))
     }
+
+    fn verify_session(&self, token: &String, duration: Option<i64>) -> QueryResult<User> {
+        Ok(Some(User {
+            id: "someid".to_owned(),
+            username: "someusername".to_owned(),
+            fullname: Some("a full name".to_owned())
+        }))
+    }
 }
