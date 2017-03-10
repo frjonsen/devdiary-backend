@@ -15,7 +15,6 @@ hyper-native-tls = "0.2"
 router = "*"
 iron-sessionstorage = {git = "https://github.com/frjonsen/iron-sessionstorage" }
 hyper = "0.10.4"
-urlencoded = "*"
 plugin = "*"
 serde = "0.9.10"
 serde_derive = "0.9.10"
@@ -24,6 +23,7 @@ uuid = "*"
 r2d2 = "0.7.1"
 r2d2_postgres = "0.12.0"
 url = "*"
+params = "*"
 
 [dependencies.iron]
 version = "*"

@@ -6,7 +6,6 @@ use ::hyper::net::HttpsConnector;
 use ::hyper_native_tls::NativeTlsClient;
 use ::iron::{Handler, IronResult, Response, Request, status};
 use ::plugin::Pluggable;
-use ::urlencoded::UrlEncodedQuery;
 use std::collections::HashMap;
 use std::sync::{Arc,RwLock};
 
@@ -119,6 +118,7 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
     fn handle(&self, request: &mut Request) -> IronResult<Response> {
         use ::std::error::Error;
         use ::iron_sessionstorage::SessionRequestExt;
+        use ::params::{Params, Value};
         use super::UrlForTrait;
 
         if let Some(user) = request.extensions.get::<User>() {
@@ -131,9 +131,13 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
             return Ok(Response::with((status::Found, redir)));
         }
 
-        let result = request.get_ref::<UrlEncodedQuery>()
+        let result = request.get_ref::<Params>()
         .map_err(|e| e.description().to_owned())
-        .and_then(|hashmap| hashmap.get("code").unwrap().get(0).ok_or("Parameter \"code\" missing".to_owned()))
+        .and_then(|hashmap| match hashmap.find(&["code"]) {
+            Some(&Value::String(ref code)) => Ok(code),
+            _ => Err("Parameter \"code\" missing".to_owned())
+        })
+        //.and_then(|hashmap| hashmap.get("code").unwrap().get(0).ok_or("Parameter \"code\" missing".to_owned()))
         .and_then(|code| self.access_code_reply(code))
         .and_then(|access_code| self.get_user_info(access_code))
         .and_then(|user| self.save_new_user(user))

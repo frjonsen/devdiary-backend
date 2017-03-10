@@ -30,4 +30,6 @@ pub trait Connection: Send + Sync{
     /// # Arguments
     /// * `token`- The token string to verify
     fn verify_session(&self, token: &String, duration: Option<i64>) -> QueryResult<::entities::User>;
+
+    fn create_local_user(&self, username: &String, password: &String, fullname: Option<String>) -> QueryResult<User>;
 }

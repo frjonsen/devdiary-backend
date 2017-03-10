@@ -93,7 +93,6 @@ impl super::super::Connection for PostgresConnection {
         let connection = self.pool.get().unwrap();
         let uuid = ::uuid::Uuid::parse_str(&user.id).unwrap();
         let query = connection.query("SELECT * FROM create_new_session($1)", &[&uuid]);
-        println!("{:?}", query);
         return query.map_err(|e| e.description().to_owned())
         .and_then(|rows| {
             match rows.is_empty() {
@@ -110,6 +109,23 @@ impl super::super::Connection for PostgresConnection {
             Some(dur) => connection.query("SELECT * FROM access_session_token($1, $2, $3)", &[token, &true, &dur.to_string()]),
             None => connection.query("SELECT * FROM access_session_token($1)", &[token])
         };
+        return query.map_err(|e| e.description().to_owned())
+        .and_then(|rows| {
+            match rows.is_empty() {
+                true => Ok(None),
+                false => Ok(User::from_sql_row(rows.get(0)))
+            }
+        });
+     }
+
+     fn create_local_user(&self, username: &String, password: &String, fullname: Option<String>) -> QueryResult<User> {
+        let connection = self.pool.get().unwrap();
+
+        let query = match fullname {
+            Some(name) => connection.query("SELECT * FROM create_local_user($1, $2, $3)", &[&username, &password, &name]),
+            None => connection.query("SELECT * FROM create_local_user($1, $2)", &[&username, &password])
+        };
+        println!("{:?}", query);
         return query.map_err(|e| e.description().to_owned())
         .and_then(|rows| {
             match rows.is_empty() {

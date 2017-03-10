@@ -1,8 +1,10 @@
 mod local_login;
 mod oauth;
+mod register_local_login;
 
 pub use self::local_login::LocalLogin;
 pub use self::oauth::OAuthCallback;
+pub use self::register_local_login::RegisterLocalLogin;
 use iron::Request;
 
 trait UrlForTrait {

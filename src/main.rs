@@ -10,6 +10,7 @@ extern crate hyper_native_tls;
 extern crate iron;
 extern crate iron_sessionstorage;
 extern crate logger;
+extern crate params;
 extern crate plugin;
 extern crate postgres;
 extern crate r2d2;
@@ -19,7 +20,6 @@ extern crate slog_stdlog;
 extern crate slog_stream;
 extern crate time;
 extern crate url;
-extern crate urlencoded;
 extern crate uuid;
 
 mod database;
@@ -87,6 +87,7 @@ fn main() {
     let connection = Arc::new(PostgresConnection::new(settings));
     let router = RouterBuilder::new(connection.clone())
     .oauth()
+    .local_registration()
     .finalize();
     let s = Server::new(connection, router);
     s.start();
