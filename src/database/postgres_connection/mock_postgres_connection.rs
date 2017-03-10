@@ -35,4 +35,12 @@ impl super::super::Connection for MockPostgresConnection {
             fullname: Some("a full name".to_owned())
         }))
     }
+
+    fn create_local_user(&self, username: &String, password: &String, fullname: Option<String>) -> QueryResult<User> {
+        Ok(Some(User {
+            id: "someid".to_owned(),
+            username: username.clone(),
+            fullname: fullname
+        }))
+    }
 }

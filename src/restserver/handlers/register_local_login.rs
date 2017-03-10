@@ -1,11 +1,11 @@
 use ::database::Connection;
-use std::sync::{Arc,RwLock};
-use ::iron::{Handler, IronResult, Response, Request, status};
-use plugin::Pluggable;
-use ::params::{Params, Value};
 use ::entities::{User,Session};
+use ::iron::{Handler, IronResult, Response, Request, status};
+use ::params::{Params, Value};
 use iron_sessionstorage::SessionRequestExt;
+use plugin::Pluggable;
 use std::error::Error;
+use std::sync::{Arc,RwLock};
 use super::UrlForTrait;
 
 pub struct RegisterLocalLogin<C: Connection>{
