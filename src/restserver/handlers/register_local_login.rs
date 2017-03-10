@@ -6,10 +6,13 @@ use ::params::{Params, Value};
 use ::entities::{User,Session};
 use iron_sessionstorage::SessionRequestExt;
 use std::error::Error;
+use super::UrlForTrait;
 
 pub struct RegisterLocalLogin<C: Connection>{
     connection: Arc<C>
 }
+
+impl<C: Connection> UrlForTrait for RegisterLocalLogin<C> {}
 
 impl<C: Connection> RegisterLocalLogin<C> {
     pub fn new(_connection: Arc<C>) -> RegisterLocalLogin<C> {
@@ -26,6 +29,16 @@ impl<C: Connection> RegisterLocalLogin<C> {
 
 impl<C: Connection + 'static> Handler for RegisterLocalLogin<C> {
     fn handle(&self, request: &mut Request) -> IronResult<Response> {
+
+        if let Some(user) = request.extensions.get::<User>() {
+            use iron::Url;
+            use iron::modifiers::Redirect;
+
+            let url = self.get_url_for(request, "index");
+            let redir = Redirect(url);
+            return Ok(Response::with((status::Found, redir)));
+        }
+
         let mut user: ::database::QueryResult<User> = Ok(None);
         {
             let params = request.get_ref::<Params>().unwrap();
