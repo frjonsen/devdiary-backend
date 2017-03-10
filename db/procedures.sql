@@ -167,7 +167,3 @@ BEGIN
   
   RETURN QUERY SELECT Person.id, Person.username, Person.fullname FROM Person WHERE Person.id = _session.person_id;
 END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
-
-SELECT * FROM create_or_get_github_user('ausername', 'apassword');
-
-SELECT * FROM create_new_session((SELECT id FROM Person));

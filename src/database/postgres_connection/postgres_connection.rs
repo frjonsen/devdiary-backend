@@ -3,6 +3,8 @@ use ::std::error::Error;
 use ::entities::*;
 use super::super::QueryResult;
 use super::FromSqlRow;
+use ::postgres::error::Error as pgError;
+use ::postgres::error::{DbError,SqlState};
 
 pub struct PostgresConnection {
     pool: ::r2d2::Pool<::r2d2_postgres::PostgresConnectionManager>,
@@ -125,8 +127,15 @@ impl super::super::Connection for PostgresConnection {
             Some(name) => connection.query("SELECT * FROM create_local_user($1, $2, $3)", &[&username, &password, &name]),
             None => connection.query("SELECT * FROM create_local_user($1, $2)", &[&username, &password])
         };
-        println!("{:?}", query);
-        return query.map_err(|e| e.description().to_owned())
+        return query.map_err(|e| {
+            if let pgError::Db(dberror) = e {
+                match dberror.code {
+                    SqlState::UniqueViolation => return "Username already taken".to_owned(),
+                    _ => return "Unexpected error".to_owned()
+                };
+            };
+            return "something".to_owned()
+        })
         .and_then(|rows| {
             match rows.is_empty() {
                 true => Ok(None),
