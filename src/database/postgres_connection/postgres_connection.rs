@@ -102,4 +102,20 @@ impl super::super::Connection for PostgresConnection {
             }
         });
      }
+
+     fn verify_session(&self, token: &String, duration: Option<i64>) -> QueryResult<User> {
+        let connection = self.pool.get().unwrap();
+
+        let query = match duration {
+            Some(dur) => connection.query("SELECT * FROM access_session_token($1, $2, $3)", &[token, &true, &dur.to_string()]),
+            None => connection.query("SELECT * FROM access_session_token($1)", &[token])
+        };
+        return query.map_err(|e| e.description().to_owned())
+        .and_then(|rows| {
+            match rows.is_empty() {
+                true => Ok(None),
+                false => Ok(User::from_sql_row(rows.get(0)))
+            }
+        });
+     }
 }

@@ -13,7 +13,7 @@ log = "*"
 lazy_static = "0.2.2"
 hyper-native-tls = "0.2"
 router = "*"
-iron-sessionstorage = "*"
+iron-sessionstorage = {git = "https://github.com/frjonsen/iron-sessionstorage" }
 hyper = "0.10.4"
 urlencoded = "*"
 plugin = "*"

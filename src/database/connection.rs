@@ -19,9 +19,15 @@ pub trait Connection: Send + Sync{
     ///
     fn new_github_user(&self, user: &GithubUserInfo) -> QueryResult<::entities::User>;
 
-    // Creates a new session for the specified user.
-    //
-    // # Arguments
-    // * `user` - The user to create a new session for
+    /// Creates a new session for the specified user.
+    ///
+    /// # Arguments
+    /// * `user` - The user to create a new session for
     fn create_session(&self, user: &User) -> QueryResult<::entities::Session>;
+
+    /// Verifies an existing session, fetching the user with the token id
+    ///
+    /// # Arguments
+    /// * `token`- The token string to verify
+    fn verify_session(&self, token: &String, duration: Option<i64>) -> QueryResult<::entities::User>;
 }

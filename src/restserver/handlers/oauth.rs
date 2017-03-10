@@ -119,6 +119,16 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
     fn handle(&self, request: &mut Request) -> IronResult<Response> {
         use ::std::error::Error;
         use ::iron_sessionstorage::SessionRequestExt;
+
+        if let Some(user) = request.extensions.get::<User>() {
+            use iron::Url;
+            use iron::modifiers::Redirect;
+            println!("{:?}", request);
+
+            let redir = Redirect(url_for!(request, "index"));
+            return Ok(Response::with((status::Found, redir)));
+        }
+
         let result = request.get_ref::<UrlEncodedQuery>()
         .map_err(|e| e.description().to_owned())
         .and_then(|hashmap| hashmap.get("code").unwrap().get(0).ok_or("Parameter \"code\" missing".to_owned()))
@@ -130,7 +140,6 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
             request.session().set(session);
             Ok(())
         });
-
         match result {
             Ok(res) => Ok(Response::with((status::Ok, format!("{:?}", res)))),
             Err(err) => Ok(Response::with((status::BadRequest, err)))

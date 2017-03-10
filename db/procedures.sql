@@ -137,7 +137,7 @@ BEGIN
   DELETE FROM Session WHERE person_id = id;
 END $$ LANGUAGE 'plpgsql' SECURITY DEFINER;
 
-CREATE OR REPLACE FUNCTION access_session_token(_token Text, update_access BOOLEAN = TRUE, token_valid_duration Text = NULL)
+CREATE OR REPLACE FUNCTION access_session_token(_token Text, update_access BOOLEAN = FALSE, token_valid_duration Text = NULL)
 RETURNS TABLE(id uuid, username Text, fullname text) AS
 $$
 DECLARE

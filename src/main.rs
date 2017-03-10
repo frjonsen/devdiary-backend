@@ -1,6 +1,7 @@
 #[cfg(test)] #[macro_use] extern crate yup_hyper_mock as hyper_mock;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate log;
+#[macro_use] extern crate router;
 #[macro_use] extern crate serde_derive;
 #[macro_use] extern crate slog;
 extern crate config;
@@ -13,7 +14,6 @@ extern crate plugin;
 extern crate postgres;
 extern crate r2d2;
 extern crate r2d2_postgres;
-extern crate router;
 extern crate serde_json;
 extern crate slog_stdlog;
 extern crate slog_stream;
@@ -30,7 +30,7 @@ use default_config::DefaultConfig;
 use restserver::{RouterBuilder, Server};
 use slog::DrainExt;
 use std::io;
-use std::sync::RwLock;
+use std::sync::{Arc,RwLock};
 
 lazy_static!{
     static ref CONFIG: RwLock<DefaultConfig> = {
@@ -83,9 +83,10 @@ fn setup_logging() {
 fn main() {
     setup_logging();
     let settings = build_connection_settings();
-    let router = RouterBuilder::new(PostgresConnection::new(settings))
+    let connection = Arc::new(PostgresConnection::new(settings));
+    let router = RouterBuilder::new(connection.clone())
     .oauth()
     .finalize();
-    let s = Server::new(router);
+    let s = Server::new(connection, router);
     s.start();
 }
