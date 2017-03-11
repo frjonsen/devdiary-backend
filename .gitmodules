@@ -1,0 +1,3 @@
+[submodule "devdiary-frontend"]
+	path = devdiary-frontend
+	url = git@github.com:frjonsen/devdiary-frontend.git
