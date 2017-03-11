@@ -47,8 +47,9 @@ impl<C: Connection + 'static> RouterBuilder<C> {
         self
     }
 
-    pub fn local_registration(mut self) -> RouterBuilder<C> {
+    pub fn local_users(mut self) -> RouterBuilder<C> {
         self.internal_router.post("/register", RegisterLocalLogin::new(self.connection.clone()), "register_local_user");
+        self.internal_router.post("/login", LocalLogin::new(self.connection.clone()), "local_login");
         self
     }
 

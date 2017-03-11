@@ -143,4 +143,16 @@ impl super::super::Connection for PostgresConnection {
             }
         });
      }
+
+     fn verify_local_user(&self, username: &String, password: &String) -> QueryResult<User> {
+        let connection = self.pool.get().unwrap();
+
+        let query = connection.query("SELECT * FROM authenticate_local_user($1, $2)", &[&username, &password]);
+        return query.map_err(|e| e.description().to_owned()).and_then(|rows| {
+            match rows.is_empty() {
+                true => Ok(None),
+                false => Ok(User::from_sql_row(rows.get(0)))
+            }
+        });
+     }
 }

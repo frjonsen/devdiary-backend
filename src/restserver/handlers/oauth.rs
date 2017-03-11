@@ -119,16 +119,9 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
         use ::std::error::Error;
         use ::iron_sessionstorage::SessionRequestExt;
         use ::params::{Params, Value};
-        use super::UrlForTrait;
 
-        if let Some(user) = request.extensions.get::<User>() {
-            use iron::Url;
-            use iron::modifiers::Redirect;
-            println!("{:?}", request);
-
-            let url = self.get_url_for(request, "index");
-            let redir = Redirect(url);
-            return Ok(Response::with((status::Found, redir)));
+        if let Some(_) = request.extensions.get::<User>() {
+            return Ok(Response::with((status::Accepted)));
         }
 
         let result = request.get_ref::<Params>()
@@ -152,8 +145,6 @@ impl<C: Connection + 'static> Handler for OAuthCallback<C> {
         }
     }
 }
-
-impl<C: Connection + 'static> super::UrlForTrait for OAuthCallback<C> { }
 
 #[cfg(test)]
 mod test {

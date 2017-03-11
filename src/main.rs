@@ -87,7 +87,7 @@ fn main() {
     let connection = Arc::new(PostgresConnection::new(settings));
     let router = RouterBuilder::new(connection.clone())
     .oauth()
-    .local_registration()
+    .local_users()
     .finalize();
     let s = Server::new(connection, router);
     s.start();

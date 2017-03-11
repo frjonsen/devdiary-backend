@@ -5,7 +5,7 @@ use ::iron_sessionstorage::backends::SignedCookieBackend;
 use ::iron_sessionstorage::cookie::Cookie;
 use iron::Handler;
 use iron::prelude::*;
-use iron::{BeforeMiddleware,AfterMiddleware, typemap};
+use iron::{BeforeMiddleware, typemap};
 use logger::{Logger, Format};
 use router::Router;
 use std::sync::Arc;
@@ -64,7 +64,7 @@ impl<C: Connection + 'static> Server<C, Chain> {
     pub fn new(_connection: Arc<C>, router: Router) -> Server<C, Chain> {
         use iron::AroundMiddleware;
 
-        let mut chain = Server::<C, Chain>::make_chain(router, _connection.clone());
+        let chain = Server::<C, Chain>::make_chain(router, _connection.clone());
 
         let server = Iron::new(chain);
 
