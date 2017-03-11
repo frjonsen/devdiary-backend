@@ -1,4 +1,5 @@
 #[cfg(test)] #[macro_use] extern crate yup_hyper_mock as hyper_mock;
+#[cfg(test)] #[macro_use] extern crate iron_test;
 #[macro_use] extern crate lazy_static;
 #[macro_use] extern crate log;
 #[macro_use] extern crate router;

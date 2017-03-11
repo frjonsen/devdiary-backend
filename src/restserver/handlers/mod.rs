@@ -1,7 +1,9 @@
 mod local_login;
 mod oauth;
 mod register_local_login;
+#[cfg(test)] mod test_utility;
 
+#[cfg(test)] pub use self::test_utility::*;
 pub use self::local_login::LocalLogin;
 pub use self::oauth::OAuthCallback;
 pub use self::register_local_login::RegisterLocalLogin;

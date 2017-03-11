@@ -38,3 +38,4 @@ features = ["with-uuid"]
 
 [dev-dependencies]
 yup-hyper-mock = "*"
+iron-test = "*"

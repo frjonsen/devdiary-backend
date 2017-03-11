@@ -54,7 +54,6 @@ impl<C: Connection> OAuthCallback<C> {
         use ::std::error::Error;
 
         let url = format!("{}?access_token={}", GITHUB_ENDPOINTS.read().unwrap().get("user_info").unwrap(), token.access_token);
-        println!("{}", url);
         let mut headers = Headers::new();
         headers.set(Accept::json());
         headers.set(UserAgent("DevDiary".to_owned()));
@@ -172,7 +171,6 @@ mod test {
 
     fn create_mock_http() -> ::hyper::Client {
         let mut urls = super::GITHUB_ENDPOINTS.write().unwrap();
-        println!("Set user_info valid");
         urls.insert("access_code", "https://validaccesscodeurl.com");
         mock_connector!(MockRedirectPolicy {
             "https://validaccesscodeurl.com" => "HTTP/1.1 200 OK\r\n\

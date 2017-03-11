@@ -43,4 +43,15 @@ impl super::super::Connection for MockPostgresConnection {
             fullname: fullname
         }))
     }
+
+    fn verify_local_user(&self, username: &String, password: &String) -> QueryResult<User> {
+        match password.as_ref() {
+            "thecorrectpassword" => Ok(Some(User {
+                id: "someid".to_owned(),
+                username: username.clone(),
+                fullname: None
+            })),
+            _ => Ok(None)
+        }
+    }
 }
