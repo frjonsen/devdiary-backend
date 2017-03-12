@@ -1,9 +1,12 @@
+# When working with the repos, we prefer using ssh to get the submodule
+# For travis, this would require adding deploy keys or uploading a pvt key,
+# but since the repo is public, might as well just replace and use https.
 git:
   submodules: false
 
-before_install:
-  - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
-  - git submodule update --init --recursive
+#before_install:
+#  - sed -i 's/git@github.com:/https:\/\/github.com\//' .gitmodules
+#  - git submodule update --init --recursive
 
 language: rust
 rust:
