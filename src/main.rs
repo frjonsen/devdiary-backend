@@ -22,6 +22,7 @@ extern crate slog_stream;
 extern crate time;
 extern crate url;
 extern crate uuid;
+extern crate iron_cors;
 
 mod database;
 mod default_config;

@@ -6,9 +6,11 @@ use ::iron_sessionstorage::cookie::Cookie;
 use iron::Handler;
 use iron::prelude::*;
 use iron::{BeforeMiddleware, typemap};
+use iron::method::Method;
 use logger::{Logger, Format};
 use router::Router;
 use std::sync::Arc;
+use ::iron_cors::CORS;
 
 /*
 struct ResponseTime;
@@ -41,6 +43,7 @@ impl typemap::Key for User {
 impl<C: Connection + 'static> BeforeMiddleware for SessionMiddleware<C> {
 
     fn before(&self, req: &mut Request) -> IronResult<()> {
+        println!("Checking if logged in");
         use ::entities::Session;
         use iron_sessionstorage::{SessionRequestExt,Value};
         if let Some(session) = try!(req.session().get::<Session>()) {
@@ -119,6 +122,9 @@ impl<C: Connection + 'static> Server<C, Chain> {
         //chain.link_before(ResponseTime);
         //chain.link_after(ResponseTime);
         c.link_after(logger_after);
+        c.link_after(CORS::new(vec![
+         (vec![Method::Get, Method::Post], "test".to_owned())
+        ]));
         c
     }
 

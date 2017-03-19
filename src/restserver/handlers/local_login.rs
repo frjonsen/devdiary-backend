@@ -49,7 +49,7 @@ impl<C: Connection> LocalLogin<C> {
 
 impl<C: Connection + 'static> Handler for LocalLogin<C> {
     fn handle(&self, request: &mut Request) -> IronResult<Response> {
-
+        println!("Got request");
         if let Some(_) = request.extensions.get::<User>() {
             return Ok(Response::with((status::Accepted)));
         }
